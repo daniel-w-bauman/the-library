@@ -1,0 +1,17 @@
+mongoClient
+  database
+    collection
+      item
+
+  auth
+    users
+      {firstname, lastname, email, password} //password is hashed in format: <email+" "+password>
+  files
+    user
+      {folder, filename}
+      {entry, data}
+
+entryTypes:
+  events - [{date/time, description}, ...]
+  notes - [{noteTitle, text}, ...]
+  todo - [{todo, status}, ...] //status: done / pending
