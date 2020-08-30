@@ -18,6 +18,9 @@
   },
   "homepage": "https://github.com/daniel-w-bauman/thelibrary#readme",
   "dependencies": {
-    "express": "^4.17.1"
+    "bcrypt": "^5.0.0",
+    "express": "^4.17.1",
+    "mongodb": "^3.6.0",
+    "uuid": "^8.3.0"
   }
 }
