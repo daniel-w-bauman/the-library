@@ -1,0 +1,23 @@
+{
+  "name": "thelibrary",
+  "version": "1.0.0",
+  "description": "A library for information management, add-on to pantel",
+  "main": "server.js",
+  "scripts": {
+    "test": "node server.js",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daniel-w-bauman/thelibrary.git"
+  },
+  "author": "Daniel Bauman",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/daniel-w-bauman/thelibrary/issues"
+  },
+  "homepage": "https://github.com/daniel-w-bauman/thelibrary#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
