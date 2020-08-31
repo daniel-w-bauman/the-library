@@ -2,7 +2,8 @@ let connection = require('./mongodbConnector').connection;
 const bcrypt = require('bcrypt');
 const uuid = require('uuid');
 let dbname = 'auth';
-let collection = 'users'
+let collection = 'users';
+
 
 function createUser(firstname, lastname, email, password){
   return new Promise(function(resolve, reject) {
@@ -53,7 +54,7 @@ function login(email,password){
             if(match) {
               let token = uuid.v4();
               users.findOneAndUpdate({'email': email},{'$set': {'token': token}}).then(function(res){
-                user.token = token;
+                user.token = token;                
                 resolve(user);
               },function(err){
                 reject(err);
@@ -82,7 +83,9 @@ function logout(token){
     connection.then(function(client){
       client.db(dbname).collection(collection)
         .findOneAndUpdate({'token': token}, {'$set': {'token': ''}})
-        .then(result => resolve(result), err => reject(err));
+        .then(result => {
+          resolve(result);
+        }, err => reject(err));
     },function(err){
       reject(err);
     });
