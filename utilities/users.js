@@ -33,10 +33,11 @@ function checkIfUserExists(query){ //returns true if a user exists
 
 function createUser(firstname, lastname, email, password){
   return new Promise(function(resolve, reject) {
-    checkIfUserExists('email': email) //check if the user exists and if not then hash the password
+    checkIfUserExists({'email': email}) //check if the user exists and if not then hash the password
     .then(userFound => {
       if(userFound){
         reject({'message': 'The email entered is already in use.'});
+        return;
       } else {
         return bcrypt.hash(email + " " + password, 10); //hash password with email
       }
@@ -48,6 +49,7 @@ function createUser(firstname, lastname, email, password){
       });
     }).then(result => { //resolve the result of the insert
       resolve({'message': 'User created'});
+      return;
     }).catch(err => reject(err));
   });
 }
@@ -55,16 +57,18 @@ function createUser(firstname, lastname, email, password){
 
 function login(email, password){
   return new Promise(function(resolve, reject) {
-    findUser('email': email)
+    findUser({'email': email})
     .then(user => { //find the user, if found check if the password matches
       if(user == null){
         reject({'message': 'User not found.'});
+        return;
       } else {
         return bcrypt.hash(email + ' ' + password, 10).then(hash => { //check password
           if(user.password == hash){
             return user;
           } else {
-            reject({'message': 'Wrong email or password.'})
+            reject({'message': 'Wrong email or password.'});
+            return;
           }
         });
       }
@@ -76,6 +80,7 @@ function login(email, password){
       });
     }).then(tokenizedUser => {
         resolve(tokenizedUser);
+        return;
     }).catch(err => reject(err));
   });
 }
@@ -90,6 +95,23 @@ function logout(token){
     }).catch(err => reject(err));
   });
 }
+
+
+// users().then(users => {
+//   return users.findOneAndDelete({'lastname': 'Bauman2'});
+// }).then(result => {
+//   console.log(result);
+//   return users()
+// }).then(users => {
+users().then(users => {
+  return users.find({});
+}).then(usersList => {
+  usersList.forEach(user => {
+    console.log(user);
+  });
+}).catch(err => {
+  console.log(err);
+});
 
 
 exports.createUser = createUser;

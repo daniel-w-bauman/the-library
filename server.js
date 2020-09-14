@@ -102,18 +102,24 @@ function processUser(user) {
   return new Promise(function(resolve, reject) {
     if(!('firstname' in user)){
       reject({'message': 'You must provide a first name.'});
+      return;
     } else if(!('lastname' in user)){
       reject({'message': 'You must provide a last name.'});
+      return;
     } else if(!('email' in user)){
       reject({'message': 'You must provide an email address.'});
+      return;
     } else if(!('password' in user)){
       reject({'message': 'You must provide a password.'});
-    } else if(!validEmail(email)){
+      return;
+    } else if(!validEmail(user.email)){
       reject({'message': 'You must provide a valid email address.'});
-    } else if(!validPassword(password)){
+      return;
+    } else if(!validPassword(user.password)){
       reject({'message': 'You must provide a password.'});
+      return;
     } else {
-      vprint("Creating user: " + firstname + " " + lastname + " , " + email);
+      vprint("Creating user: " + user.firstname + " " + user.lastname + " , " + user.email);
       users.createUser(user.firstname, user.lastname, user.email, user.password)
       .then(user => resolve(user))
       .catch(err => reject(err));
@@ -126,14 +132,18 @@ function loginUser(user){
   return new Promise(function(resolve, reject) {
     if(!('email' in user)){
       reject({'message': 'You must provide an email address.'});
+      return;
     } else if(!('password' in user)){
       reject({'message': 'You must provide a password.'});
-    } else if(!validEmail(email)){
+      return;
+    } else if(!validEmail(user.email)){
       reject({'message': 'You must provide a valid email address.'});
-    } else if(!validPassword(password)){
+      return;
+    } else if(!validPassword(user.password)){
       reject({'message': 'You must provide a password.'});
+      return;
     } else {
-      vprint("Creating user: " + firstname + " " + lastname + " , " + email);
+      vprint("Creating user: " + user.firstname + " " + user.lastname + " , " + user.email);
       users.login(user.email, user.password)
       .then(user => resolve(user))
       .catch(err => reject(err));
