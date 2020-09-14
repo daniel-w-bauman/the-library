@@ -5,110 +5,89 @@ let dbname = 'auth';
 let collection = 'users';
 
 
-function createUser(firstname, lastname, email, password){
+function users() { //returns the users database collection
   return new Promise(function(resolve, reject) {
-    connection.then(function(client){
-      let users = client.db(dbname).collection(collection);
-      //check if email exists
-      users.findOne({'email': email}).then(function(user){
-        if(user == null){ //email isn't taken
-          let userObj = {};
-          userObj['email'] = email;
-          userObj['firstname'] = firstname;
-          userObj['lastname'] = lastname;
-          userObj['token'] = "";
-          let hashstr = email + " " + password;
-          bcrypt.hash(hashstr, 10).then(function(hash){ //hash password with email
-            userObj['password'] = hash;
-            users.insertOne(userObj).then(function(res){ //insert user object to database
-              resolve({'message': 'User created.'});
-            },function(err){
-              reject(err);
-            })
-          }, function(err){
-            reject({'errObj': err, 'message': 'failed encrypting password'});
-          });
-        } else {
-          reject({message: "Email taken"})
-        }
-      }, function(err){
-        reject(err);
-      });
-    },function(err){
-      reject(err);
-    });
+    connection.then(client => {
+      resolve(client.db(dbname).collection(collection));
+    }).catch(err => reject(err));
   });
 }
 
 
-function login(email,password){
-  return new Promise(function(resolve,reject){
-    connection.then(function(client){
-      let users = client.db(dbname).collection(collection);
-      users.findOne({'email': email}).then(function(user){
-        if(user == null){
-          reject({message: "Email doesn't exist."});
-        } else {
-          let hashstr = email + " " + password;
-          bcrypt.compare(hashstr,user.password).then(function(match){
-            if(match) {
-              let token = uuid.v4();
-              users.findOneAndUpdate({'email': email},{'$set': {'token': token}}).then(function(res){
-                user.token = token;                
-                resolve(user);
-              },function(err){
-                reject(err);
-              });
-            } else {
-              reject({message:"Incorrect username or password."});
-            }
-          }, function(err){
-            console.log(err);
-            reject({message: "Incorrect email or password."});
-          });
-        }
-      },function(err){
-        console.log(err);
-        reject({message: "Error retrieving user from database."});
+function findUser(query){ //returns a user that matches the query
+  return new Promise(function(resolve, reject) {
+    users().then(users => {
+      resolve(users.findOne(query));
+    }).catch(err => reject(err));
+  });
+}
+
+
+function checkIfUserExists(query){ //returns true if a user exists
+  return new Promise(function(resolve, reject) {
+    findUser(query).then(user => resolve(user !== null))
+    .catch(err => reject(err));
+  });
+}
+
+
+function createUser(firstname, lastname, email, password){
+  return new Promise(function(resolve, reject) {
+    checkIfUserExists('email': email) //check if the user exists and if not then hash the password
+    .then(userFound => {
+      if(userFound){
+        reject({'message': 'The email entered is already in use.'});
+      } else {
+        return bcrypt.hash(email + " " + password, 10); //hash password with email
+      }
+    }).then(hash => { //create user object
+      return {'email': email, 'firstname': firstname, 'lastname': lastname, 'password': hash, 'token': ''};
+    }).then(userObj => { //get the users collection and insert the new user
+      return users().then(users => {
+        return users.insertOne(userObj);
       });
-    },function(err){
-      reject(err);
-    });
+    }).then(result => { //resolve the result of the insert
+      resolve({'message': 'User created'});
+    }).catch(err => reject(err));
+  });
+}
+
+
+function login(email, password){
+  return new Promise(function(resolve, reject) {
+    findUser('email': email)
+    .then(user => { //find the user, if found check if the password matches
+      if(user == null){
+        reject({'message': 'User not found.'});
+      } else {
+        return bcrypt.hash(email + ' ' + password, 10).then(hash => { //check password
+          if(user.password == hash){
+            return user;
+          } else {
+            reject({'message': 'Wrong email or password.'})
+          }
+        });
+      }
+    }).then(verifiedUser => {
+      let token = uuid.v4();
+      return users.findOneAndUpdate({'email': email},{'$set': {'token': token}}).then(res => {
+        verifiedUser.token = token;
+        return verifiedUser;
+      });
+    }).then(tokenizedUser => {
+        resolve(tokenizedUser);
+    }).catch(err => reject(err));
   });
 }
 
 
 function logout(token){
   return new Promise(function(resolve, reject) {
-    connection.then(function(client){
-      client.db(dbname).collection(collection)
-        .findOneAndUpdate({'token': token}, {'$set': {'token': ''}})
-        .then(result => {
-          resolve(result);
-        }, err => reject(err));
-    },function(err){
-      reject(err);
-    });
-  });
-}
-
-
-function findUser(query){
-  return new Promise(function(resolve, reject) {
-    connection.then(function(client){
-      let users = client.db(dbname).collection(collection);
-      users.findOne(query).then(function(user){
-        if(user == null){
-          reject({'message': 'User not found.'});
-        } else {
-          resolve(user);
-        }
-      },function(err){
-        reject(err);
-      });
-    }, function(err){
-      reject(err);
-    });
+    users().then(users => {
+      return users.findOneAndUpdate({'token': token}, {'$set': {'token': ''}})
+    }).then(res => {
+      resolve(res);
+    }).catch(err => reject(err));
   });
 }
 

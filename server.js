@@ -16,6 +16,7 @@ server.use(bodyParser.urlencoded({
   extended: true
 }));
 
+
 server.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "http://localhost:3000");
     res.header("Access-Control-Allow-Credentials", "true");
@@ -24,115 +25,57 @@ server.use(function(req, res, next) {
     next();
 });
 
-server.get('/', function(req,res){
+
+server.get('/', (req,res) => {
   res.header("Content-Type", "text/plain");
   res.end("Hello World");
 });
 
-server.post('/api/createuser',function(req,res){
-  let response = {};
-  if("firstname" in req.body && "lastname" in req.body && "email" in req.body && "password" in req.body){
-    let firstname = req.body.firstname;
-    let lastname = req.body.lastname;
-    let email = req.body.email;
-    let password = req.body.password;
-    vprint("Creating user: " + firstname + " " + lastname + " , " + email);
-    if(firstname.length < 2){
-      response.status = '1';
-      response.error = 'Firstname must have more than 1 letter.';
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-    } else if(lastname.length < 2){
-      response.status = '1';
-      response.error = 'Lastname must have more than 1 letter.';
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-    } else if(!validEmail(email)){
-      response.status = '1';
-      response.error = 'Not a valid email address.';
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-    } else if(!validPassword(password)){
-      response.status = '1';
-      response.error = 'Invalid password, must contain between 8 to 16 letters/digits/characters.';
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-    } else {
-      users.createUser(firstname, lastname, email, password).then(function(message){
-        response.status = '0';
-        response.message = message;
-        res.header("Content-Type",'application/json');
-        res.send(JSON.stringify(response, null, 4));
-      }, function(err){
-        response.status = '1';
-        response.error = error.message;
-        res.header("Content-Type",'application/json');
-        res.send(JSON.stringify(response, null, 4));
-      });
-    }
-  } else {
-    response.status = '1';
-    response.error = 'Not all fields are full.';
+
+server.post('/api/createuser', (req, res) => {
+  processUser(req.body).then(response => {
+    response.status = '0';
     res.header("Content-Type",'application/json');
     res.send(JSON.stringify(response, null, 4));
-  }
+  }).catch(err => {
+    console.log(err);
+    err.status = '1';
+    res.header("Content-Type",'application/json');
+    res.send(JSON.stringify(err, null, 4));
+  });
 });
 
 
-server.post('/api/login',function(req,res){
-  let response = {};
-  if("email" in req.body && "password" in req.body){
-    let email = req.body.email;
-    let password = req.body.password;
-    vprint("logging in user: " + email);
-    if(!validEmail(email)){
-      response.status = '1';
-      response.error = 'Not a valid email address.';
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-    } else if(!validPassword(password)){
-      response.status = '1';
-      response.error = 'Invalid password, must contain between 8 to 16 letters/digits/characters.';
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-    }
-    users.login(email, password).then(function(user){
-      response.status = '0';
-      response.firstname = user.firstname;
-      response.lastname = user.lastname;
-      response.token = user.token;
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-    }, function(err){
-      response.status = '1';
-      response.error = err.message;
-      res.header("Content-Type",'application/json');
-      res.send(JSON.stringify(response, null, 4));
-      vprint(err);
-    });
-  } else {
-    response.status = '1';
-    response.error = 'Not all fields are full.';
+server.post('/api/login', (req,res) => {
+  loginUser(req.body).then(response => {
+    response.status = '0';
     res.header("Content-Type",'application/json');
     res.send(JSON.stringify(response, null, 4));
-  }
+  }).catch(err => {
+    console.log(err);
+    err.status = '1';
+    res.header("Content-Type",'application/json');
+    res.send(JSON.stringify(err, null, 4));
+  });
 });
+
 
 server.get('/api/logout/:token', function(req,res){
   let response = {};
   users.logout(req.params.token).then(result => {
+    vprint(result);
     response.status = '0';
-    console.log(result);
     response.message = 'Signed out successfully.';
     res.header("Content-Type",'application/json');
     res.send(JSON.stringify(response, null, 4));
-  }, err => {
+  }).catch(err => {
     response.status = '1';
-    response.error = err.message;
+    response.message = err.message;
     res.header("Content-Type",'application/json');
     res.send(JSON.stringify(response, null, 4));
   });
 });
+
 
 function validEmail(email){
   let parts = email.split('@');
@@ -146,12 +89,58 @@ function validEmail(email){
   return true;
 }
 
+
 function validPassword(password){
-  if(password.length > 16 || password.length < 8){
+  if(password.length > 32 || password.length < 8){
     return false;
   }
   return true;
 }
+
+
+function processUser(user) {
+  return new Promise(function(resolve, reject) {
+    if(!('firstname' in user)){
+      reject({'message': 'You must provide a first name.'});
+    } else if(!('lastname' in user)){
+      reject({'message': 'You must provide a last name.'});
+    } else if(!('email' in user)){
+      reject({'message': 'You must provide an email address.'});
+    } else if(!('password' in user)){
+      reject({'message': 'You must provide a password.'});
+    } else if(!validEmail(email)){
+      reject({'message': 'You must provide a valid email address.'});
+    } else if(!validPassword(password)){
+      reject({'message': 'You must provide a password.'});
+    } else {
+      vprint("Creating user: " + firstname + " " + lastname + " , " + email);
+      users.createUser(user.firstname, user.lastname, user.email, user.password)
+      .then(user => resolve(user))
+      .catch(err => reject(err));
+    }
+  });
+}
+
+
+function loginUser(user){
+  return new Promise(function(resolve, reject) {
+    if(!('email' in user)){
+      reject({'message': 'You must provide an email address.'});
+    } else if(!('password' in user)){
+      reject({'message': 'You must provide a password.'});
+    } else if(!validEmail(email)){
+      reject({'message': 'You must provide a valid email address.'});
+    } else if(!validPassword(password)){
+      reject({'message': 'You must provide a password.'});
+    } else {
+      vprint("Creating user: " + firstname + " " + lastname + " , " + email);
+      users.login(user.email, user.password)
+      .then(user => resolve(user))
+      .catch(err => reject(err));
+    }
+  });
+}
+
 
 server.listen(3001);
 
